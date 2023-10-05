@@ -7,7 +7,6 @@ from typing import Optional
 import flask
 import werkzeug
 
-from packaging import version as version_builder
 from flask import Blueprint, current_app, request, g, send_from_directory, url_for
 
 flask_version: str = flask.__version__
