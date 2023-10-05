@@ -141,7 +141,7 @@ class DebugToolbarExtension(object):
 
     def dispatch_request(self):
         """Modified version of Flask.dispatch_request to call process_view."""
-        if version_builder.parse(flask.__version__) >= version_builder.parse("2.2.0"):
+        if flask_version >= "2.2.0":
             req = request_ctx.request
         else:
             req = _request_ctx_stack.top.request
