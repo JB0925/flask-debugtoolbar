@@ -1,12 +1,19 @@
 import os
+import re
 import warnings
 
+from typing import Optional
+
 import flask
+import werkzeug
+
 from packaging import version as version_builder
 from flask import Blueprint, current_app, request, g, send_from_directory, url_for
 
+flask_version: str = flask.__version__
+werkzeug_version: str = werkzeug.__version__
 
-if version_builder.parse(flask.__version__) >= version_builder.parse("2.2.0"):
+if flask_version >= "2.2.0":
     from flask.globals import request_ctx
 else:
     from flask.globals import _request_ctx_stack
@@ -14,7 +21,10 @@ else:
 
 from jinja2 import __version__ as __jinja_version__
 from jinja2 import Environment, PackageLoader
-from werkzeug.urls import url_quote_plus
+if werkzeug_version >= "3.0.0":
+    from urllib.parse import quote_plus as url_quote_plus
+else:
+    from werkzeug.urls import url_quote_plus
 
 from flask_debugtoolbar.compat import iteritems
 from flask_debugtoolbar.toolbar import DebugToolbar
@@ -230,10 +240,11 @@ class DebugToolbarExtension(object):
                 response.headers['content-type'].startswith('text/html')):
             return response
 
+        charset = self.get_charset(response)
         if 'gzip' in response.headers.get('Content-Encoding', ''):
-            response_html = gzip_decompress(response.data).decode(response.charset)
+            response_html = gzip_decompress(response.data).decode(charset)
         else:
-            response_html = response.data.decode(response.charset)
+            response_html = response.data.decode(charset)
 
         no_case = response_html.lower()
         body_end = no_case.rfind('</body>')
@@ -257,7 +268,7 @@ class DebugToolbarExtension(object):
         toolbar_html = toolbar.render_toolbar()
 
         content = ''.join((before, toolbar_html, after))
-        content = content.encode(response.charset)
+        content = content.encode(charset)
         if 'gzip' in response.headers.get('Content-Encoding', ''):
             content = gzip_compress(content)
         response.response = [content]
@@ -271,3 +282,10 @@ class DebugToolbarExtension(object):
     def render(self, template_name, context):
         template = self.jinja_env.get_template(template_name)
         return template.render(**context)
+
+    def get_charset(self, response: flask.Response) -> str:
+        content_type: str = response.headers.get('Content-Type', '')
+        charset_match: Optional[re.Match[str]] = re.search('charset=(.*)', content_type)
+        if charset_match:
+            return charset_match.group(1)
+        return 'utf-8'

@@ -21,7 +21,6 @@ except ImportError:
     HAVE_SQLPARSE = False
 
 from flask import current_app
-
 from markupsafe import Markup
 
 
